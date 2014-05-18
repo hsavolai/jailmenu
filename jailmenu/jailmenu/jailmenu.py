@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 '''
-This file is part of Jailmenu program, which is a menu jail 
+This file is part of Jailmenu program, which is a console jail
 to provide secure access to a system.
 
 Jailmenu program is free software: you can redistribute it and/or modify
@@ -27,22 +27,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import os
-
+import ast
+from config import ConfigManager, JMConfigException  # pylint: disable=F0401
 from optparse import OptionParser
+from ConfigParser import ParsingError
 
 __all__ = []
 __version__ = 0.1
 __date__ = "2014-05-15"
 __updated__ = "2014-05-15"
 
-DEBUG = 1
+DEBUG = 0
 TESTRUN = 0
 PROFILE = 0
 
 
 def main(argv=None):
     '''Command line options.'''
-
     program_name = os.path.basename(sys.argv[0])
     program_version = "v0.1"
     program_build_date = "%s" % __updated__
@@ -50,9 +51,9 @@ def main(argv=None):
     program_version_string = "%%prog %s (%s)" % (program_version,
                                                  program_build_date)
 
-    program_longdesc = ("Jailmenu program, which is a menu jail to provides "
-                        "secure access to a system. Licensed under GNU Public "
-                        "License 2.0 "
+    program_longdesc = ("Jailmenu program, which is a console jail shell to "
+                        "provide restricted access to a system. Licensed "
+                        " under GNU Public License 2.0 "
                         "(http://www.gnu.org/licenses/gpl-2.0.html)")
 
     program_license = "Copyright Harri Savolainen 2014, GPLv2"
@@ -66,31 +67,31 @@ def main(argv=None):
                               description=program_license)
 
         parser.add_option('-c', '--config',
-                          dest='infile',
+                          dest='configfile',
                           help="set configuration file [default: %default]",
-                          metavar='FILE')
-
-        # set defaults
-        parser.set_defaults(infile="~/jailmenu.conf")
+                          metavar='FILE',
+                          default="~/jailmenu.conf")
 
         # process options
-        (opts, args) = parser.parse_args(argv)
+        # pylint: disable=W0612
+        (opts, args) = parser.parse_args()  # @UnusedVariable
 
-        if opts.verbose > 0:
-            print("verbosity level = %d" % opts.verbose)
-        if opts.infile:
-            print("infile = %s" % opts.infile)
-        if opts.outfile:
-            print("outfile = %s" % opts.outfile)
+        config_manager = ConfigManager(opts.configfile)
+
+        print(config_manager.fs_items)
 
         # MAIN BODY #
-
-    except Exception, e:
+    except ParsingError as ex:
         indent = len(program_name) * " "
-        sys.stderr.write(program_name + ": " + repr(e) + "\n")
+        sys.stderr.write(program_name + ": " + repr(ex) + "\n")
         sys.stderr.write(indent + "  for help use --help")
         return 2
 
+    except JMConfigException as ex:
+        error_message = ast.literal_eval(str(ex))
+        sys.stderr.write(program_name + ": Error: " + error_message +
+                         ". \nFor help use --help\n")
+        return 2
 
 if __name__ == "__main__":
     if DEBUG:
@@ -101,12 +102,13 @@ if __name__ == "__main__":
     if PROFILE:
         import cProfile
         import pstats
-        profile_filename = 'jailmenu_profile.txt'
-        cProfile.run('main()', profile_filename)
-        statsfile = open('profile_stats.txt', 'wb')
-        p = pstats.Stats(profile_filename, stream=statsfile)
-        stats = p.strip_dirs().sort_stats('cumulative')
-        stats.print_stats()
-        statsfile.close()
+        PROFILE_FILENAME = 'jailmenu_profile.txt'
+        cProfile.run('main()', PROFILE_FILENAME)
+        # pylint: disable=C0103
+        _statsfile = open('profile_stats.txt', 'wb')
+        _p = pstats.Stats(PROFILE_FILENAME, stream=_statsfile)
+        _stats = _p.strip_dirs().sort_stats('cumulative')
+        _stats.print_stats()
+        _statsfile.close()
         sys.exit(0)
     sys.exit(main())
