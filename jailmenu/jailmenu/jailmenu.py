@@ -41,7 +41,7 @@ __updated__ = "2014-05-15"
 
 DEBUG = 0
 TESTRUN = 0
-PROFILE = 1
+PROFILE = 0
 
 
 def main(argv=None):
