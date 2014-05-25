@@ -29,8 +29,10 @@ import sys
 import os
 import ast
 from config import ConfigManager, JMConfigException  # pylint: disable=F0401
+from console import ConsoleManager  # pylint: disable=F0401
 from optparse import OptionParser
 from ConfigParser import ParsingError
+import signal
 
 __all__ = []
 __version__ = 0.1
@@ -39,7 +41,7 @@ __updated__ = "2014-05-15"
 
 DEBUG = 0
 TESTRUN = 0
-PROFILE = 0
+PROFILE = 1
 
 
 def main(argv=None):
@@ -77,10 +79,16 @@ def main(argv=None):
         (opts, args) = parser.parse_args()  # @UnusedVariable
 
         config_manager = ConfigManager(opts.configfile)
+        console_manager = ConsoleManager(config_manager)
 
-        print(config_manager.fs_items)
+        # Disable console control commands
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGHUP, signal_handler)
+        signal.signal(signal.SIGTSTP, signal_handler)
+        signal.signal(signal.SIGQUIT, signal_handler)
 
-        # MAIN BODY #
+        console_manager.cmdloop()
+
     except ParsingError as ex:
         indent = len(program_name) * " "
         sys.stderr.write(program_name + ": " + repr(ex) + "\n")
@@ -92,6 +100,15 @@ def main(argv=None):
         sys.stderr.write(program_name + ": Error: " + error_message +
                          ". \nFor help use --help\n")
         return 2
+
+
+def signal_handler(signal, frame):
+    '''
+    Catching Control commands.
+    :param signal:
+    :param frame:
+    '''
+    None
 
 if __name__ == "__main__":
     if DEBUG:
